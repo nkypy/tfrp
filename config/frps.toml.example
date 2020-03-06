@@ -1,0 +1,4 @@
+[common]
+bind_port = 12323
+log_level = "info"
+auth_token = "press your unique auth token here"
