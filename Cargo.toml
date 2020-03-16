@@ -10,13 +10,16 @@ edition = "2018"
 log = "*"
 env_logger = "*"
 chrono = "*"
-async-std = {version="*", features=["attributes"]}
+tokio = {version="*", features=["full"]}
 ring = "*"
 bytes = "*"
 serde = {version="*", features=["derive"]}
-clap = { git = "https://gitee.com/useptonly/clap/" }
+clap = { git = "https://gitee.com/useptonly/clap.git" }
 toml = "*"
 futures = "*"
+hyper = "*"
+hyper-tls = "*"
+warp = "*"
 
 [dev-dependencies]
 
