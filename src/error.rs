@@ -1,12 +1,13 @@
 use crate::Result;
-use hyper::{Body, Response};
-use std::convert::From;
+use hyper::{Body, Error as HyperError, Response};
+use std::convert::{From, Into};
 use warp::hyper::StatusCode;
 
 const HTTP_NOT_FOUND_HTML: &'static str = r#"
 <!DOCTYPE html>
 <html>
 <head>
+<link rel="shortcut icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoBAMAAAB+0KVeAAAAGFBMVEUAAAA7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozsmr7C1AAAAB3RSTlMA8o3HRiCjAZ7XVAAAAFRJREFUKM9jGAUMDE6GwiroYkHi5eWFqqhirOnlQFAWgCLIVA4GCiiCjhBBERRBdYhgEYqgOUSwGEVQHCJYSEgQoZ2QRQgnEXI8wpsEAgQRdKOAAQCvriuz6lBMNwAAAABJRU5ErkJggg==">
 <title>Not Found</title>
 <style>
     body {
@@ -35,6 +36,15 @@ impl From<Error> for Box<dyn warp::Reply> {
     fn from(_e: Error) -> Self {
         let body = warp::reply::html(HTTP_NOT_FOUND_HTML);
         Box::new(warp::reply::with_status(body, StatusCode::NOT_FOUND))
+    }
+}
+
+impl Into<Error> for hyper::Error {
+    fn into(self) -> Error {
+        Error {
+            code: 404,
+            message: "NOT_FOUND".to_owned(),
+        }
     }
 }
 

@@ -4,7 +4,7 @@
 extern crate log;
 
 use clap::Clap;
-use futures::future::try_join;
+use futures::future::{try_join_all,try_join};
 use futures::join;
 use futures::FutureExt;
 use hyper::service::{make_service_fn, service_fn};
@@ -92,6 +92,16 @@ async fn transfer(mut inbound: TcpStream, proxy_addr: String) -> Result<()> {
 //     Ok(())
 // }
 
+#[cfg(target_arch = "aarch64")]
+fn test_cfg() -> () {
+    println!("this is aarch64");
+}
+
+#[cfg(not(target_arch = "aarch64"))]
+fn test_cfg() -> () {
+    println!("this is not aarch64");
+}
+
 async fn handle_request(
     req: Request<Body>,
     name: String,
@@ -102,16 +112,14 @@ async fn handle_request(
     println!("url is {} method is {}", url, &req.method());
     let mut req = req;
     *req.uri_mut() = format!("{}{}", name, &url).parse::<hyper::Uri>().unwrap();
+    // client.request(req).await
     let res = client.request(req).await;
     match res {
         Ok(body) => Ok(body),
         Err(e) => {
             error!("http client error {}", e);
-            Ok(Error {
-                code: 404,
-                message: "".to_string(),
-            }
-                .into())
+            let e: Error = e.into();
+            Ok(e.into())
         }
     }
 }
@@ -131,7 +139,6 @@ async fn new_srv(name: String, port: u16) -> Result<()> {
 async fn main() -> Result<()> {
     let opts: Opts = Clap::parse();
     env_logger::init();
-    info!("this is server");
     let buf = std::fs::read_to_string(opts.config)?;
     let conf: Config = toml::from_str(&buf)?;
     let cryptor = frp::crypto::aead::AeadCryptor::new(conf.common.auth_token);
@@ -143,25 +150,24 @@ async fn main() -> Result<()> {
     let mut dec_msg = vec![0u8; enc_msg.len() - cryptor.tag_len];
     cryptor.decrypt(&enc_msg, &mut dec_msg);
     info!("decrypted data is {}", String::from_utf8(dec_msg.to_vec())?);
-    // let mut listener =
-    //     TcpListener::bind(format!("{}:{}", "127.0.0.1", conf.common.bind_port)).await?;
-    // // let mut incoming = listener.incoming();
-    // // while let Some(stream) = incoming.next().await {
-    // //     let mut stream = stream?;
-    // //     task::spawn(handle_stream(cryptor.clone(), stream));
-    // // }
-    // while let Ok((inbound, _)) = listener.accept().await {
-    //     let transfer = transfer(inbound, "10.16.2.74:8999".to_string()).map(|r| {
-    //         if let Err(e) = r {
-    //             println!("Failed to transfer; error={}", e);
-    //         }
-    //     });
-    //
-    //     tokio::spawn(transfer);
-    // }
-    let _ret = try_join(
-        new_srv("http://10.16.2.74:8999".to_string(), 12301),
-        new_srv("https://10.16.8.108".to_string(), 12302),
-    ).await;
+    test_cfg();
+    let mut listener = TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], conf.common.bind_port))).await?;
+    let server = async move {
+        let mut incoming = listener.incoming();
+        while let Some(socket_res) = incoming.next().await {
+            match socket_res {
+                Ok(socket) => {
+                    info!("accepted connection from {:?}", socket.peer_addr());
+                    task::spawn(new_srv("http://10.16.2.74:8999".to_string(), 12303));
+                    task::spawn(new_srv("https://10.16.8.108".to_string(), 12302));
+                }
+                Err(err) => {
+                    error!("accept error = {:?}", err);
+                }
+            }
+        }
+    };
+    info!("frp server is listening at 0.0.0.0:{}.", conf.common.bind_port);
+    server.await;
     Ok(())
 }
