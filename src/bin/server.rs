@@ -24,7 +24,7 @@ use frp::error::Error;
 use frp::Result;
 
 #[derive(Clap)]
-#[clap(name = "frps", version = "0.1.0", author = "Jack Shih")]
+#[clap(name = "tfrps", version = "0.1.0", author = "Jack Shih")]
 struct Opts {
     #[clap(short = "c", long = "config", default_value = "config/frps.toml")]
     config: String,
@@ -167,7 +167,7 @@ async fn main() -> Result<()> {
             }
         }
     };
-    info!("frp server is listening at 0.0.0.0:{}.", conf.common.bind_port);
+    info!("tfrp server is listening at 0.0.0.0:{}.", conf.common.bind_port);
     server.await;
     Ok(())
 }
