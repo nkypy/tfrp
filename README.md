@@ -1,4 +1,10 @@
-# frp-rs
+# tfrp
 
-## 目的
-仅为学习 Rust 和 frp 而创建的仓库，请勿使用。
+### What is tfrp?
+tfrp is a fast reverse proxy powered by rust lang.
+
+### Notice
+this project is created for learning rust and frp, please do not use in production.
+
+### LICENSE
+Apache 2.0

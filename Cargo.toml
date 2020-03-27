@@ -1,5 +1,5 @@
 [package]
-name = "frp-rs"
+name = "tfrp"
 version = "0.1.0"
 authors = ["Jack Shih <i@kshih.com>"]
 edition = "2018"
