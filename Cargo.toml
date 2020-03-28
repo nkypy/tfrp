@@ -17,8 +17,12 @@ serde = {version="*", features=["derive"]}
 clap = { git = "https://gitee.com/useptonly/clap.git" }
 toml = "*"
 futures = "*"
+futures-util = "*"
 hyper = "*"
+headers = "*"
 hyper-tls = "*"
+tungstenite = "*"
+tokio-tungstenite = "*"
 
 [dev-dependencies]
 

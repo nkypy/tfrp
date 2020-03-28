@@ -4,12 +4,16 @@
 extern crate log;
 
 use clap::Clap;
-use futures::future::{try_join_all,try_join};
+use futures::future::{try_join_all, try_join};
 use futures::join;
 use futures::FutureExt;
+use futures_util::sink::SinkExt;
+use futures_util::TryFutureExt;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Client, Request, Response, Server, StatusCode};
+use hyper::header::{UPGRADE, CONNECTION,HeaderValue};
 use hyper_tls::HttpsConnector;
+use headers::{self, HeaderMapExt};
 use serde::Deserialize;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
@@ -19,6 +23,8 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::prelude::*;
 use tokio::stream::StreamExt;
 use tokio::task;
+use tungstenite::protocol;
+use tokio_tungstenite::{accept_async, WebSocketStream};
 
 use frp::error::Error;
 use frp::Result;
@@ -54,43 +60,6 @@ async fn transfer(mut inbound: TcpStream, proxy_addr: String) -> Result<()> {
 
     Ok(())
 }
-
-// async fn stream_data(
-//     cryptor: frp::crypto::aead::AeadCryptor,
-//     mut reader: ReadHalf,
-//     mut writer: WriteHalf,
-// ) -> () {
-//     let mut buf = [0; 1024];
-//     let mut written = 0;
-//     loop {
-//         let mut len = 0;
-//         match reader.read(&mut buf).await {
-//             Ok(0) => len = 0,
-//             Ok(l) => len = l,
-//             Err(ref e) if e.kind() == ErrorKind::Interrupted => continue,
-//             Err(e) => return,
-//         };
-//         let mut enc_msg = vec![0u8; len + cryptor.tag_len];
-//         cryptor.encrypt(&buf[..len], &mut enc_msg);
-//         let mut dec_msg = vec![0u8; enc_msg.len() - cryptor.tag_len];
-//         cryptor.decrypt(&enc_msg, &mut dec_msg);
-//         writer.write_all(&dec_msg).await;
-//         written += len as u64;
-//     }
-// }
-
-// async fn handle_stream(cryptor: frp::crypto::aead::AeadCryptor, mut stream: TcpStream) -> Result<()> {
-//     let mut conn = TcpStream::connect("10.9.1.127:8999").await?;
-//     // let (mut reader, mut writer) = &mut (&stream, &stream);
-//     // let (mut reader2, mut writer2) = &mut (&conn, &conn);
-//     let (mut reader, mut writer) = stream.split();
-//     let (mut reader2, mut writer2) = conn.split();
-//     join!(
-//         stream_data(cryptor.clone(), reader, writer2),
-//         stream_data(cryptor.clone(), reader2, writer),
-//     );
-//     Ok(())
-// }
 
 #[cfg(target_arch = "aarch64")]
 fn test_cfg() -> () {
@@ -135,39 +104,50 @@ async fn new_srv(name: String, port: u16) -> Result<()> {
     Ok(())
 }
 
+async fn handle_ws(mut upgraded: hyper::upgrade::Upgraded) -> Result<()> {
+    let mut ws_stream = WebSocketStream::from_raw_socket(upgraded, protocol::Role::Server, None).await;
+    while let Some(msg) = ws_stream.next().await {
+        let msg = msg?;
+        info!("websocket msg is {}", msg);
+        // if msg.is_text() || msg.is_binary() {
+        //     ws_stream.send(msg).await?;
+        // }
+    };
+    Ok(())
+}
+
+async fn handle_conn(req: Request<Body>) -> Result<Response<Body>> {
+    if !req.headers().contains_key(UPGRADE) || !req.uri().eq("/clients"){
+        return Ok(frp::error::Error{}.into());
+    };
+    let key = req.headers().typed_get::<headers::SecWebsocketKey>();
+    tokio::task::spawn(async move {
+        match req.into_body().on_upgrade().await {
+            Ok(upgraded) => {
+                if let Err(e) = handle_ws(upgraded).await {
+                    eprintln!("server foobar io error: {}", e)
+                };
+            }
+            Err(e) => eprintln!("upgrade error: {}", e),
+        }
+    });
+    let mut res = Response::new(Body::empty());
+    *res.status_mut() = StatusCode::SWITCHING_PROTOCOLS;
+    res.headers_mut().insert(UPGRADE, HeaderValue::from_static("websocket"));
+    res.headers_mut().typed_insert(headers::SecWebsocketAccept::from(key.unwrap()));
+    res.headers_mut().insert(CONNECTION, HeaderValue::from_static("upgrade"));
+    Ok(res)
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let opts: Opts = Clap::parse();
     env_logger::init();
     let buf = std::fs::read_to_string(opts.config)?;
     let conf: Config = toml::from_str(&buf)?;
-    let cryptor = frp::crypto::aead::AeadCryptor::new(conf.common.auth_token);
-    let content =
-        "content to encrypt, 哈哈，测试测试，试试 chacha20 加解密怎么样，下周得去上海了。"
-            .as_bytes();
-    let mut enc_msg = vec![0u8; content.len() + cryptor.tag_len];
-    cryptor.encrypt(content, &mut enc_msg);
-    let mut dec_msg = vec![0u8; enc_msg.len() - cryptor.tag_len];
-    cryptor.decrypt(&enc_msg, &mut dec_msg);
-    info!("decrypted data is {}", String::from_utf8(dec_msg.to_vec())?);
-    test_cfg();
-    let mut listener = TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], conf.common.bind_port))).await?;
-    let server = async move {
-        let mut incoming = listener.incoming();
-        while let Some(socket_res) = incoming.next().await {
-            match socket_res {
-                Ok(socket) => {
-                    info!("accepted connection from {:?}", socket.peer_addr());
-                    task::spawn(new_srv("http://10.16.2.74:8999".to_string(), 12303));
-                    task::spawn(new_srv("https://10.16.8.108".to_string(), 12302));
-                }
-                Err(err) => {
-                    error!("accept error = {:?}", err);
-                }
-            }
-        }
-    };
+    let new_service = make_service_fn(|_| async { Ok::<_, hyper::Error>(service_fn(handle_conn)) });
+    let srv = Server::bind(&SocketAddr::from(([0,0,0,0], conf.common.bind_port))).serve(new_service);
     info!("tfrp server is listening at 0.0.0.0:{}.", conf.common.bind_port);
-    server.await;
+    srv.await?;
     Ok(())
 }
