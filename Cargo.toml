@@ -28,13 +28,13 @@ tokio-tungstenite = "*"
 
 
 [lib]
-name = "frp"
+name = "tfrp"
 path = "src/lib.rs"
 
 [[bin]]
-name = "frps"
+name = "tfrps"
 path = "src/bin/server.rs"
 
 [[bin]]
-name = "frpc"
+name = "tfrpc"
 path = "src/bin/client.rs"

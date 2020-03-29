@@ -26,13 +26,13 @@ use tokio::task;
 use tungstenite::protocol;
 use tokio_tungstenite::{accept_async, WebSocketStream};
 
-use frp::error::Error;
-use frp::Result;
+use tfrp::error::Error;
+use tfrp::Result;
 
 #[derive(Clap)]
 #[clap(name = "tfrps", version = "0.1.0", author = "Jack Shih")]
 struct Opts {
-    #[clap(short = "c", long = "config", default_value = "config/frps.toml")]
+    #[clap(short = "c", long = "config", default_value = "config/tfrps.toml")]
     config: String,
 }
 
@@ -118,7 +118,7 @@ async fn handle_ws(mut upgraded: hyper::upgrade::Upgraded) -> Result<()> {
 
 async fn handle_conn(req: Request<Body>) -> Result<Response<Body>> {
     if !req.headers().contains_key(UPGRADE) || !req.uri().eq("/clients"){
-        return Ok(frp::error::Error{}.into());
+        return Ok(Error{}.into());
     };
     let key = req.headers().typed_get::<headers::SecWebsocketKey>();
     tokio::task::spawn(async move {

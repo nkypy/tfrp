@@ -1,8 +1,8 @@
 #[macro_use]
 extern crate log;
 
-use frp::error::Error;
-use frp::Result;
+use tfrp::error::Error;
+use tfrp::Result;
 use futures::TryFutureExt;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server, StatusCode};
@@ -66,7 +66,8 @@ async fn main() -> Result<()> {
         let msg = msg?;
         info!("client msg is {}", &msg);
         if msg.is_text() || msg.is_binary() {
-            ws_stream.send(msg).await?;
+            info!("websocket client msg is {}", &msg);
+            // ws_stream.send(msg).await?;
         }
     }
     Ok(())
