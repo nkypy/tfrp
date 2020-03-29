@@ -21,9 +21,11 @@ use tokio::net::tcp::{ReadHalf, WriteHalf};
 use tokio::prelude::*;
 use tokio::stream::StreamExt;
 use tokio::task;
+use tokio::sync::watch::Receiver;
 use tokio_tungstenite::{WebSocketStream, tungstenite::protocol};
 
 use tfrp::{Result, Error};
+use std::collections::HashMap;
 
 #[derive(Clap)]
 #[clap(name = "tfrps", version = "0.1.0", author = "Jack Shih <i@kshih.com>")]
@@ -89,25 +91,37 @@ async fn handle_request(
     }
 }
 
-async fn new_srv(name: String, port: u16) -> Result<()> {
+async fn new_srv(name: String, port: u16, mut rx: Receiver<()>) -> Result<()> {
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    info!("listen new server of {}", &addr);
     let new_service = make_service_fn(move |_| {
         let name = name.clone();
         async { Ok::<_, hyper::Error>(service_fn(move |req| handle_request(req, name.to_owned()))) }
     });
-    let srv = Server::bind(&addr).serve(new_service);
+    // 后续如果客户端断开，需要关闭服务端
+    let srv = Server::bind(&addr).serve(new_service).with_graceful_shutdown(async {
+        rx.recv().await.unwrap();
+    });
     srv.await?;
     Ok(())
 }
 
-async fn handle_ws(upgraded: hyper::upgrade::Upgraded) -> Result<()> {
+async fn handle_ws(upgraded: hyper::upgrade::Upgraded, rx: Receiver<()>) -> Result<()> {
     let mut ws_stream = WebSocketStream::from_raw_socket(upgraded, protocol::Role::Server, None).await;
     while let Some(msg) = ws_stream.next().await {
         let msg = msg?;
-        info!("websocket msg is {}", msg);
-        // if msg.is_text() || msg.is_binary() {
-        //     ws_stream.send(msg).await?;
-        // }
+        info!("websocket msg is \n{}", msg);
+        let conf: std::result::Result<HashMap<String, tfrp::model::config::ClientConfig>, toml::de::Error> = toml::from_slice(&msg.into_data());
+        match conf {
+            Ok(c) => {
+                info!("clients conf from ws");
+                for i in c {
+                    let mut rx = rx.clone();
+                    tokio::task::spawn(new_srv(format!("http://{}:{}", i.1.local_ip, i.1.local_port), i.1.remote_port, rx));
+                }
+            },
+            Err(_e) => {ws_stream.send(protocol::Message::binary("client config error")).await?;},
+        };
     };
     Ok(())
 }
@@ -120,8 +134,12 @@ async fn handle_conn(req: Request<Body>) -> Result<Response<Body>> {
     tokio::task::spawn(async move {
         match req.into_body().on_upgrade().await {
             Ok(upgraded) => {
-                if let Err(e) = handle_ws(upgraded).await {
-                    error!("handle websocket error: {}", e)
+                let (tx, mut rx) = tokio::sync::watch::channel(());
+                rx.recv().await.unwrap();
+                if let Err(e) = handle_ws(upgraded, rx).await {
+                    error!("handle websocket error: {}", e);
+                    let _ = tx.broadcast(());
+                    info!("shut down clients");
                 };
             }
             Err(e) => error!("upgrade error: {}", e),

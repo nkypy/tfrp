@@ -15,6 +15,7 @@ use tokio::net::TcpStream;
 use tokio::stream::StreamExt;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use futures_util::sink::SinkExt;
+use std::collections::HashMap;
 
 #[derive(Clap)]
 #[clap(name = "tfrpc", version = "0.1.0", author = "Jack Shih <i@kshih.com>")]
@@ -26,6 +27,7 @@ struct Opts {
 #[derive(Deserialize)]
 struct Config {
     common: CommonConfig,
+    clients: HashMap<String, tfrp::model::config::ClientConfig>,
 }
 
 #[derive(Deserialize)]
@@ -36,21 +38,6 @@ struct CommonConfig {
     auth_token: String,
 }
 
-#[derive(Deserialize)]
-enum ClientType {
-    TCP,
-    UDP,
-}
-
-
-#[derive(Deserialize)]
-struct ClientConfig {
-    client_type: ClientType,
-    local_ip: String,
-    local_port: u16,
-    remote_port: u16,
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let opts: Opts = Clap::parse();
@@ -59,7 +46,7 @@ async fn main() -> Result<()> {
     let conf: Config = toml::from_str(&buf)?;
     // let conn = TcpStream::connect(format!("{}:{}",conf.common.server_addr, conf.common.server_port)).await?;
     let (mut ws_stream, _) = connect_async(format!("ws://{}:{}/clients",conf.common.server_addr, conf.common.server_port)).await?;
-    ws_stream.send(Message::binary(buf.as_bytes())).await?;
+    ws_stream.send(Message::binary(toml::to_string(&conf.clients)?.as_bytes())).await?;
     while let Some(msg) = ws_stream.next().await {
         let msg = msg?;
         info!("client msg is {}", &msg);
