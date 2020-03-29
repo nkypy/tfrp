@@ -5,32 +5,28 @@ extern crate log;
 
 use clap::Clap;
 use futures::future::{try_join_all, try_join};
-use futures::join;
 use futures::FutureExt;
 use futures_util::sink::SinkExt;
 use futures_util::TryFutureExt;
-use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Client, Request, Response, Server, StatusCode};
-use hyper::header::{UPGRADE, CONNECTION,HeaderValue};
+use hyper::service::{make_service_fn, service_fn};
+use hyper::header::{UPGRADE, HeaderValue};
 use hyper_tls::HttpsConnector;
 use headers::{self, HeaderMapExt};
 use serde::Deserialize;
-use std::io::ErrorKind;
 use std::net::SocketAddr;
 use tokio::io;
-use tokio::net::tcp::{ReadHalf, WriteHalf};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::net::tcp::{ReadHalf, WriteHalf};
 use tokio::prelude::*;
 use tokio::stream::StreamExt;
 use tokio::task;
-use tungstenite::protocol;
-use tokio_tungstenite::{accept_async, WebSocketStream};
+use tokio_tungstenite::{WebSocketStream, tungstenite::protocol};
 
-use tfrp::error::Error;
-use tfrp::Result;
+use tfrp::{Result, Error};
 
 #[derive(Clap)]
-#[clap(name = "tfrps", version = "0.1.0", author = "Jack Shih")]
+#[clap(name = "tfrps", version = "0.1.0", author = "Jack Shih <i@kshih.com>")]
 struct Opts {
     #[clap(short = "c", long = "config", default_value = "config/tfrps.toml")]
     config: String,
@@ -104,7 +100,7 @@ async fn new_srv(name: String, port: u16) -> Result<()> {
     Ok(())
 }
 
-async fn handle_ws(mut upgraded: hyper::upgrade::Upgraded) -> Result<()> {
+async fn handle_ws(upgraded: hyper::upgrade::Upgraded) -> Result<()> {
     let mut ws_stream = WebSocketStream::from_raw_socket(upgraded, protocol::Role::Server, None).await;
     while let Some(msg) = ws_stream.next().await {
         let msg = msg?;
@@ -125,17 +121,19 @@ async fn handle_conn(req: Request<Body>) -> Result<Response<Body>> {
         match req.into_body().on_upgrade().await {
             Ok(upgraded) => {
                 if let Err(e) = handle_ws(upgraded).await {
-                    eprintln!("server foobar io error: {}", e)
+                    error!("handle websocket error: {}", e)
                 };
             }
-            Err(e) => eprintln!("upgrade error: {}", e),
+            Err(e) => error!("upgrade error: {}", e),
         }
     });
     let mut res = Response::new(Body::empty());
+    // websocket 返回头部
     *res.status_mut() = StatusCode::SWITCHING_PROTOCOLS;
-    res.headers_mut().insert(UPGRADE, HeaderValue::from_static("websocket"));
-    res.headers_mut().typed_insert(headers::SecWebsocketAccept::from(key.unwrap()));
-    res.headers_mut().insert(CONNECTION, HeaderValue::from_static("upgrade"));
+    let h = res.headers_mut();
+    h.typed_insert(headers::Upgrade::websocket());
+    h.typed_insert(headers::SecWebsocketAccept::from(key.unwrap()));
+    h.typed_insert(headers::Connection::upgrade());
     Ok(res)
 }
 

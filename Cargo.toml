@@ -21,7 +21,6 @@ futures-util = "*"
 hyper = "*"
 headers = "*"
 hyper-tls = "*"
-tungstenite = "*"
 tokio-tungstenite = "*"
 
 [dev-dependencies]

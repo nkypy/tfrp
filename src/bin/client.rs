@@ -1,8 +1,7 @@
 #[macro_use]
 extern crate log;
 
-use tfrp::error::Error;
-use tfrp::Result;
+use tfrp::{Result, Error};
 use futures::TryFutureExt;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server, StatusCode};
@@ -14,12 +13,11 @@ use clap::Clap;
 use serde::Deserialize;
 use tokio::net::TcpStream;
 use tokio::stream::StreamExt;
-use tokio_tungstenite::connect_async;
-use tungstenite::protocol::Message;
+use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use futures_util::sink::SinkExt;
 
 #[derive(Clap)]
-#[clap(name = "tfrpc", version = "0.1.0", author = "Jack Shih")]
+#[clap(name = "tfrpc", version = "0.1.0", author = "Jack Shih <i@kshih.com>")]
 struct Opts {
     #[clap(short = "c", long = "config", default_value = "config/tfrpc.toml")]
     config: String,

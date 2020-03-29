@@ -6,6 +6,8 @@ pub mod error;
 pub mod handler;
 pub mod model;
 
+pub use crate::error::Error;
+
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[cfg(test)]
