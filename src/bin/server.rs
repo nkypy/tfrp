@@ -116,7 +116,7 @@ async fn handle_ws(upgraded: hyper::upgrade::Upgraded, rx: Receiver<()>) -> Resu
             Ok(c) => {
                 info!("clients conf from ws");
                 for i in c {
-                    let mut rx = rx.clone();
+                    let rx = rx.clone();
                     tokio::task::spawn(new_srv(format!("http://{}:{}", i.1.local_ip, i.1.local_port), i.1.remote_port, rx));
                 }
             },
