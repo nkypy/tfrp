@@ -1,4 +1,5 @@
 # tfrp
+![Build](https://github.com/nkypy/tfrp/workflows/Build/badge.svg)
 
 ### What is tfrp?
 tfrp is a fast reverse proxy powered by rust lang.

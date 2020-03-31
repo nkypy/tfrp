@@ -25,6 +25,7 @@ use tokio::sync::watch::Receiver;
 use tokio_tungstenite::{WebSocketStream, tungstenite::protocol};
 
 use tfrp::{Result, Error};
+use tfrp::model::config::ClientType;
 use std::collections::HashMap;
 
 #[derive(Clap)]
@@ -91,11 +92,50 @@ async fn handle_request(
     }
 }
 
-async fn new_srv(name: String, port: u16, mut rx: Receiver<()>) -> Result<()> {
-    let addr = SocketAddr::from(([127, 0, 0, 1], port));
-    info!("listen new server of {}", &addr);
+async fn client_tcp_handle(local_ip:String, local_port:u16, remote_port:u16, mut rx: Receiver<()>) -> Result<()> {
+    info!("local tcp client {}:{}, remote port {}.", &local_ip, &local_port, &remote_port);
+    let addr = SocketAddr::from(([127, 0, 0, 1], remote_port));
+    let mut listener = TcpListener::bind(&addr).await?;
+    // listener.set_nonblocking(true).expect("Cannot set non-blocking");
+    while let Some(stream) = listener.next().await {
+        match stream {
+            Ok(stream) => {
+                // tokio::task::spawn(move|| {
+                //     // connection succeeded
+                    println!("new client!");
+                // });
+            }
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                // Decide if we should exit
+                break;
+                // Decide if we should try to accept a connection again
+                continue;
+            }
+            Err(e) => { error!("TCP handle error {}", e); }
+        }
+    }
+    info!("drop TCP handle client");
+    drop(listener);
+    Ok(())
+}
+
+async fn client_udp_handle(local_ip:String, local_port:u16, remote_port:u16, mut rx: Receiver<()>) -> Result<()> {
+    info!("local udp client {}:{}, remote port {}.", &local_ip, &local_port, &remote_port);
+    let addr = SocketAddr::from(([127, 0, 0, 1], remote_port));
+    let mut socket = tokio::net::UdpSocket::bind(&addr).await?;
+    let mut buf = [0u8;100];
+    while let (amt, _addr) = socket.recv_from(&mut buf).await.expect("no data received") {
+        info!("UDP receive: {}", String::from_utf8_lossy(&buf[..amt]));
+        info!("UDP TODO"); 
+    };
+    Ok(())
+}
+
+async fn client_http_handle(local_ip:String, local_port:u16, remote_port:u16, mut rx: Receiver<()>) -> Result<()> {
+    info!("local http client {}:{}, remote port {}.", &local_ip, &local_port, &remote_port);
+    let addr = SocketAddr::from(([127, 0, 0, 1], remote_port));
     let new_service = make_service_fn(move |_| {
-        let name = name.clone();
+        let name = format!("http://{}:{}", local_ip, local_port);
         async { Ok::<_, hyper::Error>(service_fn(move |req| handle_request(req, name.to_owned()))) }
     });
     // 后续如果客户端断开，需要关闭服务端
@@ -117,7 +157,19 @@ async fn handle_ws(upgraded: hyper::upgrade::Upgraded, rx: Receiver<()>) -> Resu
                 info!("clients conf from ws");
                 for i in c {
                     let rx = rx.clone();
-                    tokio::task::spawn(new_srv(format!("http://{}:{}", i.1.local_ip, i.1.local_port), i.1.remote_port, rx));
+                    match i.1.client_type {
+                        ClientType::TCP => {
+                            tokio::task::spawn(client_tcp_handle(i.1.local_ip, i.1.local_port, i.1.remote_port, rx));
+                        },
+                        ClientType::UDP => {
+                            tokio::task::spawn(client_udp_handle(i.1.local_ip, i.1.local_port, i.1.remote_port, rx));
+                        }
+                        ClientType::HTTP => {
+                            tokio::task::spawn(client_http_handle(i.1.local_ip, i.1.local_port, i.1.remote_port, rx));
+                        },
+                        _ => {debug!("TODO")},
+                    }
+
                 }
             },
             Err(_e) => {ws_stream.send(protocol::Message::binary("client config error")).await?;},
