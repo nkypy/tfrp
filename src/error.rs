@@ -20,26 +20,23 @@ const HTTP_NOT_FOUND_HTML: &'static str = r#"
 <h1>The page you requested was not found.</h1>
 <p>Sorry, the page you are looking for is currently unavailable.<br/>
 Please try again later.</p>
-<p>The server is powered by <a href="https://github.com/nkypy/frp-rs" target="_blank">tfrp</a>.</p>
-<p><em>Faithfully yours, tfrp.</em></p>
+<p>The server is powered by <a href="https://github.com/nkypy/tfrp" target="_blank">tfrp</a>.</p>
+<p><em>Faithfully yours, tiny fast reverse proxy.</em></p>
 </body>
 </html>
 "#;
 
-pub struct Error {}
+pub struct Error;
 
 impl Into<Error> for hyper::Error {
     fn into(self) -> Error {
-        Error {}
+        Error
     }
 }
 
 impl From<Error> for Response<Body> {
     fn from(_e: Error) -> Self {
         let body = Body::from(HTTP_NOT_FOUND_HTML);
-        Response::builder()
-            .status(404)
-            .body(body)
-            .unwrap()
+        Response::builder().status(404).body(body).unwrap()
     }
 }
