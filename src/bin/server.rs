@@ -24,7 +24,6 @@ use tokio_tungstenite::{tungstenite::protocol, WebSocketStream};
 use tracing::{debug, error, info};
 
 use std::collections::HashMap;
-use tfrp::conn::server::Listener;
 use tfrp::model::config::ClientType;
 use tfrp::{Error, Result};
 
@@ -247,11 +246,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let buf = std::fs::read_to_string(opts.config)?;
     let conf: Config = toml::from_str(&buf)?;
-    let l = Listener::new("0.0.0.0".to_string(), conf.common.bind_port).await?;
-    info!(
-        "tfrp server is listening at 0.0.0.0:{}.",
-        conf.common.bind_port
-    );
-    futures::try_join!(l.listen(), l.write())?;
+    let addr = format!("0.0.0.0:{}", conf.common.bind_port);
+    tfrp::conn::server::listen(addr).await?;
     Ok(())
 }
