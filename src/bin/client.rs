@@ -14,6 +14,8 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 
+use tfrp::conn::ProxyFrame;
+
 #[derive(Clap)]
 #[clap(name = "tfrpc", version = tfrp::VERSION, author = tfrp::AUTHOR)]
 struct Opts {
@@ -65,29 +67,42 @@ async fn main() -> Result<()> {
         proxy: HashMap::new(),
     };
     for (k, v) in conf.clients {
-        let proxy = toml::to_string(&tfrp::model::client::ProxyClient {
-            name: k.clone(),
-            local_port: v.local_port,
-            remote_port: v.remote_port,
-        })?;
-        listener.write(proxy.as_bytes()).await?;
+        let encoded =
+            bincode::serialize(&ProxyFrame::Client(k.clone(), v.local_port, v.remote_port))
+                .unwrap();
+        tracing::debug!("send client config {:?}", &encoded);
+        listener.write(&encoded).await?;
         let conn = TcpStream::connect(format!("127.0.0.1:{}", v.local_port)).await?;
         l.proxy.insert(k, conn.clone());
         tracing::debug!("proxy stream locol addr is {}", conn.local_addr().unwrap());
     }
+    let conn = l.proxy.get_mut(&"tcp1".to_string()).unwrap();
     loop {
-        let mut buf = vec![0u8; 1280];
+        let mut buf = vec![0u8; 5120];
         match listener.read(&mut buf).await {
-            Ok(0) => break,
-            Ok(n) => {
-                // let res = String::from_utf8_lossy(&buf[0..size]);
-                // tracing::debug!("recv data {:?}", &buf[0..n]);
-                let decoded: tfrp::conn::ProxyFrame = bincode::deserialize(&buf[0..n]).unwrap();
-                let conn = l.proxy.get_mut(&"tcp1".to_string()).unwrap();
-                conn.write(&buf[0..n]).await?;
-                tracing::debug!("read from server size {}, res {:?}", n, decoded);
+            Ok(0) => {
+                tracing::error!("read data EOF");
+                break;
             }
-            Err(_) => break,
+            Ok(n) => {
+                let decoded: ProxyFrame = bincode::deserialize(&buf[0..n]).unwrap();
+                tracing::debug!("read from server size {}", n);
+                if let ProxyFrame::Body(name, addr, body) = decoded {
+                    conn.write(&body).await?;
+                    let mut buf = vec![0u8; 5120];
+                    let size = conn.read(&mut buf).await?;
+                    // tracing::debug!("read new data {:?}", &buf[0..size]);
+                    // TODO: 回传数据
+                    let encoded =
+                        bincode::serialize(&ProxyFrame::Body(name, addr, buf[0..size].to_vec()))
+                            .unwrap();
+                    listener.write(&encoded).await?;
+                };
+            }
+            Err(e) => {
+                tracing::error!("read data error {:?}", e);
+                break;
+            }
         };
         tracing::debug!("proxy end");
     }
