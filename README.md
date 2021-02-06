@@ -1,8 +1,10 @@
 # tfrp
-![Build](https://github.com/nkypy/tfrp/workflows/Build/badge.svg)
+![build](https://img.shields.io/github/workflow/status/nkypy/tfrp/CI?style=flat-square)
+![made-with](https://img.shields.io/badge/made%20with-Rust-dea584.svg?style=flat-square)
+![prs](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
 
 ### What is tfrp?
-tfrp is a fast reverse proxy powered by rust lang.
+tfrp is a tiny fast reverse proxy powered by rust lang.
 
 ### Usage
 Rename and edit config files.
@@ -24,4 +26,4 @@ tfrp is gladly accepts contributions! Do not hesitate to open issues or PR's.
 I will take a look as soon as I have time for it.
 
 ### License
-[Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0.txt)
+![license](https://img.shields.io/github/license/nkypy/tfrp?style=for-the-badge)
