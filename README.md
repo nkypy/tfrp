@@ -28,7 +28,7 @@ tfrp is gladly accepts contributions! Do not hesitate to open issues or PR's.
 I will take a look as soon as I have time for it.
 
 ### Donation
-buy me a cup of coffee.
+Buy me a cup of coffee.
 
 ### License
-![license](https://img.shields.io/github/license/nkypy/tfrp?style=for-the-badge)
+[![license](https://img.shields.io/github/license/nkypy/tfrp?style=for-the-badge)](./LICENSE)
