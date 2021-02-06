@@ -1,6 +1,6 @@
 # tfrp
 ![build](https://img.shields.io/github/workflow/status/nkypy/tfrp/CI?style=flat-square)
-![made-with](https://img.shields.io/badge/made%20with-Rust-dea584.svg?style=flat-square)
+![made-with](https://img.shields.io/badge/made%20with-Rust-a05012.svg?style=flat-square)
 ![prs](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
 
 ### What is tfrp?
