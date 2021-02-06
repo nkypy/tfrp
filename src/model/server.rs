@@ -18,10 +18,11 @@ use crate::model::config::ClientType;
 use futures::{SinkExt, StreamExt};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::upgrade::Upgraded;
-use hyper::{Body, Client, Request, Response, Server, StatusCode};
+use hyper::{client::connect::Connect, Body, Client, Request, Response, Server, StatusCode};
 use hyper_tls::HttpsConnector;
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::watch::{Receiver, Sender};
 use tokio_tungstenite::{tungstenite::protocol, WebSocketStream};
 use tracing::{debug, error, info};
@@ -94,26 +95,26 @@ impl AppServer {
         // srv.await?;
         Ok(())
     }
-    pub async fn handle_request(
-        req: Request<Body>,
-        name: String,
-        mut rx: Receiver<()>,
-    ) -> std::result::Result<Response<Body>, hyper::Error> {
-        let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, hyper::Body>(https);
-        let url = req.uri().to_string();
-        println!("url is {} method is {}", url, &req.method());
-        let mut req = req;
-        *req.uri_mut() = format!("{}{}", name, &url).parse::<hyper::Uri>().unwrap();
-        // client.request(req).await
-        let res = client.request(req).await;
-        match res {
-            Ok(body) => Ok(body),
-            Err(e) => {
-                error!("http client error {}", e);
-                let e: crate::Error = e.into();
-                Ok(e.into())
-            }
-        }
-    }
+    // pub async fn handle_request(
+    //     req: Request<Body>,
+    //     name: String,
+    //     mut rx: Receiver<()>,
+    // ) -> std::result::Result<Response<Body>, hyper::Error> {
+    //     let https = HttpsConnector::new();
+    //     let client = Client::builder().build::<_, hyper::Body>(https);
+    //     let url = req.uri().to_string();
+    //     println!("url is {} method is {}", url, &req.method());
+    //     let mut req = req;
+    //     *req.uri_mut() = format!("{}{}", name, &url).parse::<hyper::Uri>().unwrap();
+    //     // client.request(req).await
+    //     let res = client.request(req).await;
+    //     match res {
+    //         Ok(body) => Ok(body),
+    //         Err(e) => {
+    //             error!("http client error {}", e);
+    //             let e: crate::Error = e.into();
+    //             Ok(e.into())
+    //         }
+    //     }
+    // }
 }

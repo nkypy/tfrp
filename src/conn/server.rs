@@ -1,9 +1,9 @@
 use futures::FutureExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{
     tcp::{ReadHalf, WriteHalf},
     TcpListener, TcpStream,
 };
-use tokio::prelude::*;
 use tokio::sync::mpsc::{self, Receiver, Sender};
 
 use crate::Result;

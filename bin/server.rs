@@ -16,8 +16,7 @@ use tokio::io;
 use tokio::io::AsyncWriteExt;
 use tokio::net::tcp::{ReadHalf, WriteHalf};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::prelude::*;
-use tokio::stream::StreamExt;
+// use tokio::stream::StreamExt;
 use tokio::sync::watch::Receiver;
 use tokio::task;
 use tokio_tungstenite::{tungstenite::protocol, WebSocketStream};
@@ -69,27 +68,27 @@ fn test_cfg() -> () {
     println!("this is not aarch64");
 }
 
-async fn handle_request(
-    req: Request<Body>,
-    name: String,
-) -> std::result::Result<Response<Body>, hyper::Error> {
-    let https = HttpsConnector::new();
-    let client = Client::builder().build::<_, hyper::Body>(https);
-    let url = req.uri().to_string();
-    println!("url is {} method is {}", url, &req.method());
-    let mut req = req;
-    *req.uri_mut() = format!("{}{}", name, &url).parse::<hyper::Uri>().unwrap();
-    // client.request(req).await
-    let res = client.request(req).await;
-    match res {
-        Ok(body) => Ok(body),
-        Err(e) => {
-            error!("http client error {}", e);
-            let e: Error = e.into();
-            Ok(e.into())
-        }
-    }
-}
+// async fn handle_request(
+//     req: Request<Body>,
+//     name: String,
+// ) -> std::result::Result<Response<Body>, hyper::Error> {
+//     let https = HttpsConnector::new();
+//     let client = Client::builder().build::<_, hyper::Body>(https);
+//     let url = req.uri().to_string();
+//     println!("url is {} method is {}", url, &req.method());
+//     let mut req = req;
+//     *req.uri_mut() = format!("{}{}", name, &url).parse::<hyper::Uri>().unwrap();
+//     // client.request(req).await
+//     let res = client.request(req).await;
+//     match res {
+//         Ok(body) => Ok(body),
+//         Err(e) => {
+//             error!("http client error {}", e);
+//             let e: Error = e.into();
+//             Ok(e.into())
+//         }
+//     }
+// }
 
 async fn client_tcp_handle(
     local_ip: String,

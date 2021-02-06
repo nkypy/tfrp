@@ -3,6 +3,7 @@ pub mod crypto;
 pub mod error;
 pub mod handler;
 pub mod model;
+pub mod plugin;
 pub mod protocol;
 
 pub use crate::error::Error;
