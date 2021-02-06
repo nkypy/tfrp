@@ -1,8 +1,8 @@
 # tfrp
 ![build](https://img.shields.io/github/workflow/status/nkypy/tfrp/CI?style=flat-square)
-![codecov](https://img.shields.io/codecov/c/github/nkypy/tfrp?style=flat-square)
-![license](https://img.shields.io/github/license/nkypy/tfrp?style=flat-square)
-![made-with](https://img.shields.io/badge/made%20with-Rust-B7410E.svg?style=flat-square)
+[![codecov](https://img.shields.io/codecov/c/github/nkypy/tfrp?style=flat-square)](https://codecov.io/gh/nkypy/tfrp)
+[![license](https://img.shields.io/github/license/nkypy/tfrp?style=flat-square)](./LICENSE)
+[![made-with](https://img.shields.io/badge/made%20with-Rust-B7410E.svg?style=flat-square)](https://www.rust-lang.org/)
 ![prs](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
 
 ### What is tfrp?
