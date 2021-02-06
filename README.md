@@ -1,5 +1,7 @@
 # tfrp
 ![build](https://img.shields.io/github/workflow/status/nkypy/tfrp/CI?style=flat-square)
+![codecov](https://img.shields.io/codecov/c/github/nkypy/tfrp?style=flat-square)
+![license](https://img.shields.io/github/license/nkypy/tfrp?style=flat-square)
 ![made-with](https://img.shields.io/badge/made%20with-Rust-B7410E.svg?style=flat-square)
 ![prs](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
 
@@ -24,6 +26,9 @@ This project is created for learning rust and frp, please do not use in producti
 ### Contributing
 tfrp is gladly accepts contributions! Do not hesitate to open issues or PR's.
 I will take a look as soon as I have time for it.
+
+### Donation
+buy me a cup of coffee.
 
 ### License
 ![license](https://img.shields.io/github/license/nkypy/tfrp?style=for-the-badge)

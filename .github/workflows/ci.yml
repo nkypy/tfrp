@@ -3,19 +3,6 @@ on: [push, pull_request]
 name: CI
 
 jobs:
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --bin tfrps --release
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --bin tfrpc --release
   coverage:
     name: Coverage
     runs-on: ubuntu-18.04
@@ -39,3 +26,16 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ steps.coverage.outputs.report }}
           fail_ci_if_error: true
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --bin tfrps --release
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --bin tfrpc --release
