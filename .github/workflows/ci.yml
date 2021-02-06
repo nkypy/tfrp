@@ -3,14 +3,6 @@ on: [push, pull_request]
 name: CI
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -28,32 +20,22 @@ jobs:
     name: Coverage
     runs-on: ubuntu-18.04
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-      - name: Install LLVM11
-        run: |
-          curl https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository -y 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-11 main'
-          sudo apt-get install -y clang-11
-      - name: Install rust toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
           override: true
-          default: true
-      - name: Install golang toolchain
-        uses: actions/setup-go@v2
+      - uses: actions-rs/cargo@v1
         with:
-          go-version: "1.14"
-      - name: Install dependencies
-        run: sudo apt-get install llvm llvm-7 libclang-common-7-dev llvm-7-dev
-      - name: Build lcov
-        run: admin/build-lcov
-      - name: Measure coverage
-        run: admin/coverage
-      - name: Report to codecov.io
-        uses: codecov/codecov-action@v1
+          command: test
+          args: --all-features --no-fail-fast
+        env:
+          CARGO_INCREMENTAL: '0'
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+      - uses: actions-rs/grcov@v0.1
+      - uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: final.info
-          fail_ci_if_error: false
+          files: ${{ steps.coverage.outputs.report }}
+          fail_ci_if_error: true
