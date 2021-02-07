@@ -19,7 +19,7 @@ use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClientConfig {
-    pub client_type: ClientType,
+    pub protocol: ClientProtocol,
     pub local_ip: String,
     pub local_port: u16,
     pub remote_port: u16,
@@ -27,7 +27,7 @@ pub struct ClientConfig {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "lowercase", deserialize = "lowercase"))]
-pub enum ClientType {
+pub enum ClientProtocol {
     TCP,
     UDP,
     HTTP,

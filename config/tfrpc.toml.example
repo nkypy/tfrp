@@ -5,5 +5,5 @@ log_level = "info"
 auth_token = "press your unique auth token here"
 
 [clients]
-# client_type # tcp | udp | http | https
-ssh = { client_type="tcp", local_ip="127.0.0.1", local_port = 22, remote_port = 12022 }
+# protocol # tcp | udp | http | https
+ssh = { protocol="tcp", local_ip="127.0.0.1", local_port = 22, remote_port = 12022 }

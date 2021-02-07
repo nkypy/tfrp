@@ -23,7 +23,7 @@ use tokio_tungstenite::{tungstenite::protocol, WebSocketStream};
 use tracing::{debug, error, info};
 
 use std::collections::HashMap;
-use tfrp::model::config::ClientType;
+use tfrp::model::config::ClientProtocol;
 use tfrp::{Error, Result};
 
 #[derive(Clap)]
@@ -242,7 +242,7 @@ async fn handle_conn(req: Request<Body>) -> Result<Response<Body>> {
 #[tokio::main]
 async fn main() -> Result<()> {
     let opts: Opts = Clap::parse();
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt().pretty().init();
     let buf = std::fs::read_to_string(opts.config)?;
     let conf: Config = toml::from_str(&buf)?;
     let addr = format!("0.0.0.0:{}", conf.common.bind_port);

@@ -52,7 +52,7 @@ pub struct Listener {
 #[tokio::main]
 async fn main() -> Result<()> {
     let opts: Opts = Clap::parse();
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::fmt().init();
     let buf = fs::read_to_string(opts.config)?;
     let conf: Config = toml::from_str(&buf)?;
     let addr = format!("{}:{}", conf.common.server_addr, conf.common.server_port);
