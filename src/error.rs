@@ -1,7 +1,7 @@
 use hyper::{self, Body, Response};
 use std::convert::{From, Into};
 
-const HTTP_NOT_FOUND_HTML: &'static str = r#"
+pub const HTTP_NOT_FOUND_HTML: &'static str = r#"
 <!DOCTYPE html>
 <html>
 <head>

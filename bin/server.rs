@@ -11,6 +11,7 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Client, Request, Response, Server, StatusCode};
 use hyper_tls::HttpsConnector;
 use serde::Deserialize;
+use std::fs;
 use std::net::SocketAddr;
 use tokio::io;
 use tokio::io::AsyncWriteExt;
@@ -243,8 +244,7 @@ async fn handle_conn(req: Request<Body>) -> Result<Response<Body>> {
 async fn main() -> Result<()> {
     let opts: Opts = Clap::parse();
     tracing_subscriber::fmt().pretty().init();
-    let buf = std::fs::read_to_string(opts.config)?;
-    let conf: Config = toml::from_str(&buf)?;
+    let conf: Config = toml::from_str(&fs::read_to_string(opts.config)?)?;
     let addr = format!("0.0.0.0:{}", conf.common.bind_port);
     tfrp::conn::server::listen(addr).await?;
     Ok(())
