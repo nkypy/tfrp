@@ -30,7 +30,7 @@ bytes = "1.0"
 hyper = {version="0.14", features=["full"]}
 headers = "0.3"
 hyper-tls = "0.5"
-tokio-tungstenite = "0.13"
+tokio-tungstenite = "0.14"
 
 [dev-dependencies]
 
