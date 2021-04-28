@@ -14,6 +14,7 @@
 
 use std::collections::HashMap;
 
+use futures::Future;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{
     tcp::{ReadHalf, WriteHalf},
@@ -24,6 +25,7 @@ use tokio::sync::{broadcast, mpsc, oneshot};
 use crate::codec::{BuiltInCodec, CodecExt};
 use crate::protocol::ProxyFrame;
 use crate::Result;
+use crate::error::Error;
 
 #[derive(Debug)]
 pub struct Client<C> {
@@ -60,10 +62,16 @@ where
     }
     pub async fn listen<A: ToSocketAddrs>(self, addr: A) -> Result<()> {
         let stream = TcpStream::connect(addr).await?;
-        Self::handle_tcp(stream);
+        Self::handle_tcp(stream, async move |src| {
+            None
+        });
         Ok(())
     }
-    fn handle_tcp(mut stream: TcpStream) {
+    fn handle_tcp<F,Fut>(mut stream: TcpStream, func: F)
+    where
+        F: FnOnce(Vec<u8>) -> Fut + Send + Copy + 'static,
+        Fut: Future<Output = Option<()>> + Send + 'static,
+    {
         tokio::spawn(async move {
             let mut buf = vec![0u8; 4096];
             loop {
@@ -73,6 +81,20 @@ where
                         break;
                     }
                     Ok(n) => {
+                        match func(buf[0..n].to_vec()).await {
+                            Some(_) => {}
+                            None => {
+                                if let Err(we) =
+                                    stream.write(String::from(Error {}).as_bytes()).await
+                                {
+                                    tracing::error!(
+                                        "inbound from {} write response error {}",
+                                        stream.local_addr().unwrap(),
+                                        we
+                                    );
+                                };
+                            }
+                        }
                         //             let decoded = bincode::deserialize::<ProxyFrame>(&buf[0..n])?;
                         //             dbg!(&decoded);
                         //             match decoded {
