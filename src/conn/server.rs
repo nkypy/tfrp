@@ -13,9 +13,9 @@
 // limitations under the License.
 
 use std::collections::HashMap;
-use std::convert::TryInto;
+use std::convert::TryFrom;
 
-use futures::FutureExt;
+use futures::{Future, FutureExt};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{
     tcp::{ReadHalf, WriteHalf},
@@ -71,11 +71,41 @@ where
         let listener = TcpListener::bind(addr).await?;
         while let Ok((stream, peer_addr)) = listener.accept().await {
             tracing::info!("accept connection from {}", peer_addr.to_string());
-            Self::handle_tcp(stream, peer_addr.to_string());
+            Self::handle_tcp(stream, peer_addr.to_string(), async move |pa, src| {
+                match ProxyFrame::try_from(src) {
+                    Ok(frame) => {
+                        match frame {
+                            ProxyFrame::Conf(name, conf) => {
+                                tracing::debug!(
+                                    "inbound from {} read name {} config {:?}",
+                                    name,
+                                    pa,
+                                    &conf
+                                );
+                                let addr = format!("0.0.0.0:{}", conf.remote_port);
+                                tracing::debug!("proxy client {} is listening at {}", name, &addr);
+                                Self::handle_proxy(name, addr);
+                            }
+                            ProxyFrame::Body(name, addr, body) => {
+                                tracing::debug!("inbound from {} read body: {}", pa, name);
+                            }
+                        }
+                        Some(())
+                    }
+                    Err(e) => {
+                        tracing::error!("inbound from {} data serialize error {}", pa, e);
+                        None
+                    }
+                }
+            });
         }
         Ok(())
     }
-    fn handle_tcp(mut stream: TcpStream, peer_addr: String) {
+    fn handle_tcp<F, Fut>(mut stream: TcpStream, peer_addr: String, func: F)
+    where
+        F: FnOnce(String, Vec<u8>) -> Fut + Send + Copy + 'static,
+        Fut: Future<Output = Option<()>> + Send + 'static,
+    {
         tokio::spawn(async move {
             let mut buf = vec![0u8; 4096];
             loop {
@@ -85,41 +115,9 @@ where
                         break;
                     }
                     Ok(n) => {
-                        match buf[0..n].to_vec().try_into() {
-                            Ok(frame) => {
-                                match frame {
-                                    ProxyFrame::Conf(name, conf) => {
-                                        tracing::debug!(
-                                            "inbound from {} read config {:?}",
-                                            peer_addr,
-                                            &conf
-                                        );
-                                        // let addr = format!("0.0.0.0:{}", conf.remote_port);
-                                        // tracing::debug!("proxy server is listening at {}", &addr);
-                                        // let listen =
-                                        //     proxy_listen(name, addr, tx.clone(), brx.clone()).map(|r| {
-                                        //         if let Err(e) = r {
-                                        //             tracing::error!("proxy server bind error {}", e);
-                                        //         }
-                                        //     });
-                                        // tokio::spawn(listen);
-                                    }
-                                    ProxyFrame::Body(name, addr, body) => {
-                                        tracing::debug!(
-                                            "inbound from {} read body: {}",
-                                            peer_addr,
-                                            name
-                                        );
-                                        // btx.send((addr, body)).await?;
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                tracing::error!(
-                                    "inbound from {} data serialize error {}",
-                                    peer_addr,
-                                    e
-                                );
+                        match func(peer_addr.clone(), buf[0..n].to_vec()).await {
+                            Some(_) => {}
+                            None => {
                                 if let Err(we) =
                                     stream.write(String::from(Error {}).as_bytes()).await
                                 {
@@ -130,13 +128,22 @@ where
                                     );
                                 };
                             }
-                        }
+                        };
                     }
                     Err(e) => {
                         tracing::error!("inbound from {} read error {}", peer_addr, e);
                         break;
                     }
                 }
+            }
+        });
+    }
+    fn handle_proxy(name: String, addr: String) {
+        tokio::spawn(async move {
+            let listener = TcpListener::bind(addr).await.unwrap();
+            while let Ok((stream, peer_addr)) = listener.accept().await {
+                tracing::info!("proxy accept connection from {}", peer_addr.to_string());
+                Self::handle_tcp(stream, peer_addr.to_string(), async move |pa, src| None);
             }
         });
     }
