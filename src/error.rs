@@ -1,8 +1,7 @@
-use hyper::{self, Body, Response};
+use hyper::{self, Response};
 use std::convert::{From, Into};
 
-pub const HTTP_NOT_FOUND_HTML: &'static str = r#"
-<!DOCTYPE html>
+pub const HTTP_NOT_FOUND_HTML: &'static str = r#"<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8" />
@@ -34,9 +33,21 @@ impl Into<Error> for hyper::Error {
     }
 }
 
-impl From<Error> for Response<Body> {
+impl From<Error> for Response<String> {
     fn from(_e: Error) -> Self {
-        let body = Body::from(HTTP_NOT_FOUND_HTML);
-        Response::builder().status(404).body(body).unwrap()
+        Response::builder()
+            .status(404)
+            .body(HTTP_NOT_FOUND_HTML.to_string())
+            .unwrap()
+    }
+}
+
+impl From<Error> for String {
+    fn from(_e: Error) -> Self {
+        format!(
+            "HTTP/1.1 200 OK\nContent-Length: {}\nContent-Type: text/html\n\n{}",
+            HTTP_NOT_FOUND_HTML.len(),
+            HTTP_NOT_FOUND_HTML
+        )
     }
 }

@@ -4,3 +4,4 @@ Cargo.lock
 /.idea
 /config/*.toml
 */.DS_Store
+*.log

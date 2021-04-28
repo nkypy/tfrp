@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-use crate::model::config::ClientProtocol;
+use crate::model::config::Protocol;
 use futures::{SinkExt, StreamExt};
 use hyper::service::{make_service_fn, service_fn};
 use hyper::upgrade::Upgraded;

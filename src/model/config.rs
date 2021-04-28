@@ -17,19 +17,45 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ClientConfig {
-    pub protocol: ClientProtocol,
-    pub local_ip: String,
-    pub local_port: u16,
-    pub remote_port: u16,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "lowercase", deserialize = "lowercase"))]
-pub enum ClientProtocol {
+pub enum Protocol {
     TCP,
     UDP,
     HTTP,
     HTTPS,
+}
+
+// server config
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ServerConfig {
+    pub common: ServerConfigCommon,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ServerConfigCommon {
+    pub bind_port: u16,
+    pub auth_token: String,
+}
+
+// client config
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ClientConfig {
+    pub common: ClientConfigCommon,
+    pub clients: HashMap<String, ProxyClientConfig>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ClientConfigCommon {
+    pub server_addr: String,
+    pub server_port: u16,
+    // pub log_level: String,
+    pub auth_token: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProxyClientConfig {
+    pub protocol: Protocol,
+    pub local_port: u16,
+    pub remote_port: u16,
 }
