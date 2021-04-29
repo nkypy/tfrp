@@ -1,6 +1,8 @@
 #![forbid(unsafe_code)]
 #![feature(macro_attributes_in_derive_output)]
 #![feature(async_closure)]
+#![feature(test)]
+extern crate test;
 
 pub mod codec;
 pub mod conn;

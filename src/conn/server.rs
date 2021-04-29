@@ -29,12 +29,12 @@ use crate::protocol::ProxyFrame;
 use crate::Result;
 // use crate::conn::client;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Server<C: CodecExt> {
     codec: C,
-    rx: mpsc::Receiver<Vec<u8>>,
-    txp: mpsc::Sender<Vec<u8>>,
-    tx: HashMap<String, oneshot::Sender<Vec<u8>>>,
+    // rx: mpsc::Receiver<Vec<u8>>,
+    // txp: mpsc::Sender<Vec<u8>>,
+    // tx: HashMap<String, oneshot::Sender<Vec<u8>>>,
 }
 
 pub struct Proxy {
@@ -56,15 +56,15 @@ impl Default for Server<BuiltInCodec> {
 
 impl<C> Server<C>
 where
-    C: CodecExt + Send + Sync + 'static,
+    C: CodecExt + Send + Sync + Copy + 'static,
 {
     pub fn with_codec(codec: C) -> Self {
-        let (txp, rx) = mpsc::channel(32);
+        // let (txp, rx) = mpsc::channel(32);
         Server {
             codec,
-            rx,
-            txp,
-            tx: HashMap::new(),
+            // rx,
+            // txp,
+            // tx: HashMap::new(),
         }
     }
     pub async fn listen<A: ToSocketAddrs>(self, addr: A) -> Result<()> {
@@ -82,6 +82,7 @@ where
                                     pa,
                                     &conf
                                 );
+                                dbg!(self.codec.encode(name.as_bytes().to_vec()));
                                 let addr = format!("0.0.0.0:{}", conf.remote_port);
                                 tracing::debug!("proxy client {} is listening at {}", name, &addr);
                                 Self::handle_proxy(name, addr);
@@ -148,21 +149,6 @@ where
         });
     }
 }
-
-// pub async fn listen(addr: String) -> Result<()> {
-//     tracing::info!("tfrps bind to {}", &addr);
-//     let listener = TcpListener::bind(addr).await?;
-//     while let Ok((inbound, peer_addr)) = listener.accept().await {
-//         let (r, w) = inbound.split();
-//         let (tx, rx) = mpsc::channel::<ProxyFrame>(10);
-//         let (btx, brx) = broadcast::channel::<ProxyFrame>(10);
-//         tokio::spawn(futures::future::try_join(
-//             client::handle_read(r, btx.clone()),
-//             client::handle_write(w, rx),
-//         ));
-//     }
-//     Ok(())
-// }
 
 // async fn transfer_stream_read(mut r: ReadHalf<'_>, mut tx: Sender<(bool, Vec<u8>)>) -> Result<()> {
 //     let mut buf = vec![0u8; 4096];

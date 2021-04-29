@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fs::{self, File};
-use std::sync::Arc;
+use std::fs;
 
 use clap::Clap;
 
@@ -203,14 +202,13 @@ struct Opts {
 #[tokio::main]
 async fn main() -> Result<()> {
     let opts: Opts = Clap::parse();
-    // tracing_subscriber::fmt().init();
-    let log_file = File::create("my_cool_trace.log")?;
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .init();
     let conf: ServerConfig = toml::from_str(&fs::read_to_string(opts.config)?)?;
     let addr = format!("0.0.0.0:{}", conf.common.bind_port);
-    let server = Server::default().listen(addr);
+    let server =
+        Server::with_codec(tfrp::codec::AES128GCMCodec::new(conf.common.auth_token)).listen(addr);
     server.await?;
     Ok(())
 }

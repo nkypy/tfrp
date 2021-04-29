@@ -23,9 +23,9 @@ use tokio::net::{
 use tokio::sync::{broadcast, mpsc, oneshot};
 
 use crate::codec::{BuiltInCodec, CodecExt};
+use crate::error::Error;
 use crate::protocol::ProxyFrame;
 use crate::Result;
-use crate::error::Error;
 
 #[derive(Debug)]
 pub struct Client<C> {
@@ -62,12 +62,10 @@ where
     }
     pub async fn listen<A: ToSocketAddrs>(self, addr: A) -> Result<()> {
         let stream = TcpStream::connect(addr).await?;
-        Self::handle_tcp(stream, async move |src| {
-            None
-        });
+        Self::handle_tcp(stream, async move |src| None);
         Ok(())
     }
-    fn handle_tcp<F,Fut>(mut stream: TcpStream, func: F)
+    fn handle_tcp<F, Fut>(mut stream: TcpStream, func: F)
     where
         F: FnOnce(Vec<u8>) -> Fut + Send + Copy + 'static,
         Fut: Future<Output = Option<()>> + Send + 'static,

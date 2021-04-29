@@ -1,29 +1,14 @@
-pub mod aead;
+mod aead;
+mod tls;
 
 use crate::Result;
+
+pub use self::aead::AES128GCMCodec;
+pub use self::tls::TLSCodec;
+
 pub trait CodecExt {
-    fn encode(&mut self, _src: Vec<u8>) -> Result<Vec<u8>>;
-    fn decode(&mut self, _src: Vec<u8>) -> Result<Vec<u8>>;
+    fn encode(&self, _src: Vec<u8>) -> Result<Vec<u8>>;
+    fn decode(&self, _src: Vec<u8>) -> Result<Vec<u8>>;
 }
 
-pub struct BuiltInCodec;
-
-impl CodecExt for BuiltInCodec {
-    fn encode(&mut self, src: Vec<u8>) -> Result<Vec<u8>> {
-        Ok(src)
-    }
-    fn decode(&mut self, src: Vec<u8>) -> Result<Vec<u8>> {
-        Ok(src)
-    }
-}
-
-pub struct TLSCodec;
-
-impl CodecExt for TLSCodec {
-    fn encode(&mut self, src: Vec<u8>) -> Result<Vec<u8>> {
-        Ok(src)
-    }
-    fn decode(&mut self, src: Vec<u8>) -> Result<Vec<u8>> {
-        Ok(src)
-    }
-}
+pub type BuiltInCodec = TLSCodec;
