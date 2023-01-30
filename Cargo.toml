@@ -23,7 +23,7 @@ futures-util = "0.3"
 tokio = {version="1", features=["full"]}
 serde = {version="1", features=["derive"]}
 bincode = "1"
-toml = "0.6"
+toml = "0.7"
 clap = "4.0.4"
 async-channel = "1.5"
 async-trait = "0.1"
