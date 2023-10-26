@@ -25,7 +25,7 @@ serde = {version="1", features=["derive"]}
 bincode = "1"
 toml = "0.7"
 clap = "4.0.4"
-async-channel = "1.5"
+async-channel = "2.0"
 async-trait = "0.1"
 anyhow = "1"
 pin-project="1"
