@@ -40,7 +40,7 @@ bytes = "1"
 hyper = {version="1.0", features=["full"], optional=true}
 headers = "0.4"
 hyper-tls = {version="0.6", optional=true}
-tokio-tungstenite = {version="0.20", optional=true}
+tokio-tungstenite = {version="0.21", optional=true}
 
 [dev-dependencies]
 
